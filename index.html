@@ -3,9 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
-  <title>3 в ряд — v2.3</title>
+  <title>3 в ряд — Уровни</title>
+
+  <!-- === PWA МЕТАДАННЫЕ === -->
+  <!-- Эти теги позволяют Android браузеру показывать "Добавить на главный экран" -->
   <meta name="theme-color" content="#e91e63">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="3 в ряд">
   <link rel="apple-touch-icon" href="https://placehold.co/180x180/e91e63/white?text=3вРяд">
   <link rel="manifest" href="application/manifest+json,{
     %22name%22:%223%20в%20ряд%22,
@@ -18,9 +23,15 @@
       %22src%22:%22https://placehold.co/192x192/e91e63/white?text=3вРяд%22,
       %22sizes%22:%22192x192%22,
       %22type%22:%22image/png%22
+    },{
+      %22src%22:%22https://placehold.co/512x512/e91e63/white?text=3вРяд%22,
+      %22sizes%22:%22512x512%22,
+      %22type%22:%22image/png%22
     }]
   }">
+
   <style>
+    /* === ОБЩИЕ СТИЛИ === */
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -30,35 +41,22 @@
       overflow: hidden;
       touch-action: none;
     }
-    body.dark { background: #1e1e1e; }
-    #header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+
+    /* === ЗАГОЛОВОК СО СЧЁТОМ, УРОВНЕМ И ЦЕЛЬЮ === */
+    #score-container {
+      text-align: center;
       margin-bottom: 8px;
     }
-    #score-container { text-align: center; flex: 1; }
-    #score, #level, #goal, #high-score {
+    #score, #level-display, #goal, #high-score {
       font-size: 20px;
       font-weight: bold;
       color: #333;
     }
-    body.dark #score,
-    body.dark #level,
-    body.dark #goal,
-    body.dark #high-score {
-      color: #f0f0f0;
+    #level-display {
+      color: #2196f3; /* синий — для акцента на уровне */
     }
-    #settings-btn {
-      background: #2196f3;
-      color: white;
-      border: none;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      font-size: 20px;
-      cursor: pointer;
-    }
+
+    /* === ИГРОВОЕ ПОЛЕ === */
     #game {
       position: relative;
       display: grid;
@@ -73,19 +71,26 @@
     }
     .cell {
       border-radius: 6px;
+      user-select: none;
+      -webkit-user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    body.round .cell {
-      border-radius: 50%;
+    .cell.falling {
+      animation: fall 0.4s ease-out;
     }
+
+    /* === КЛОН ПЕРЕТАСКИВАЕМОЙ ФИШКИ === */
     #dragging-clone {
       position: absolute;
+      border-radius: 6px;
       pointer-events: none;
       z-index: 100;
       transform: translate(-50%, -50%);
     }
-    body.round #dragging-clone {
-      border-radius: 50%;
-    }
+
+    /* === ЧАСТИЦЫ ПРИ УДАЛЕНИИ === */
     .particle {
       position: absolute;
       width: 8px;
@@ -99,89 +104,69 @@
       from { transform: translateY(-100px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
-    #notification, #settings {
+
+    /* === ВСПЛЫВАЮЩЕЕ ОКНО "УРОВЕНЬ ПРОЙДЕН" === */
+    #notification {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.7);
-      display: none;
+      display: none; /* по умолчанию скрыто */
       align-items: center;
       justify-content: center;
       z-index: 999;
     }
-    #notification-content, #settings-content {
+    #notification-content {
       background: white;
-      padding: 24px;
+      padding: 24px 32px;
       border-radius: 12px;
       text-align: center;
       max-width: 80%;
     }
-    body.dark #notification-content,
-    body.dark #settings-content {
-      background: #2a2a2a;
-      color: white;
+    #notification-content h2 {
+      margin: 0 0 16px;
+      color: #333;
     }
-    button {
+    #notification-content button {
       padding: 10px 20px;
       background: #2196f3;
       color: white;
       border: none;
       border-radius: 6px;
+      font-size: 18px;
       cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div id="header">
-    <div id="score-container">
-      <div id="score">Счёт: 0</div>
-      <div id="level">Уровень: 1</div>
-      <div id="goal">Цель: 500</div>
-      <div id="high-score">Рекорд: 0</div>
-    </div>
-    <button id="settings-btn">⚙️</button>
+  <!-- === ОТОБРАЖЕНИЕ СЧЁТА, УРОВНЯ, ЦЕЛИ И РЕКОРДА === -->
+  <div id="score-container">
+    <div id="score">Счёт: 0</div>
+    <div id="level-display">Уровень: 1</div>
+    <div id="goal">Цель: 500</div>
+    <div id="high-score">Рекорд: 0</div>
   </div>
+
+  <!-- === ИГРОВОЕ ПОЛЕ === -->
   <div id="game"></div>
-  
+
+  <!-- === ВСПЛЫВАЮЩЕЕ ОКНО ПРИ ПРОХОЖДЕНИИ УРОВНЯ === -->
   <div id="notification">
     <div id="notification-content">
       <h2 id="notification-text">Уровень пройден!</h2>
       <button id="next-level-btn">Далее</button>
     </div>
   </div>
-  
-  <div id="settings">
-    <div id="settings-content">
-      <h3>Настройки</h3>
-      <label>Фон: 
-        <select id="theme-select">
-          <option value="light">Светлый</option>
-          <option value="dark">Тёмный</option>
-        </select>
-      </label><br><br>
-      <label>Форма фишек: 
-        <select id="shape-select">
-          <option value="square">Квадраты</option>
-          <option value="round">Круги</option>
-        </select>
-      </label><br><br>
-      <button id="close-settings">Закрыть</button>
-    </div>
-  </div>
 
   <script>
-    // === НАСТРОЙКИ ===
-    let theme = localStorage.getItem('match3Theme') || 'light';
-    let shape = localStorage.getItem('match3Shape') || 'square';
-    document.body.classList.toggle('dark', theme === 'dark');
-    document.body.classList.toggle('round', shape === 'round');
-    document.getElementById('theme-select').value = theme;
-    document.getElementById('shape-select').value = shape;
+    // === ВЕРСИЯ ИГРЫ ===
+    // Версия: v1.0
+    // Основана на "3 в ряд — идеально.txt"
+    // Добавлены: уровни, цель, уведомление, PWA, отображение уровня
 
     // === КОНСТАНТЫ ===
     const ROWS = 10;
     const COLS = 10;
     const COLORS = ['#e91e63', '#4caf50', '#2196f3', '#ff9800'];
-    const LEVEL_GOALS = [500, 800, 1200, 1600, 2000, 2500];
 
     // === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
     let score = 0;
@@ -195,9 +180,38 @@
     let highScore = localStorage.getItem('match3HighScore') ? parseInt(localStorage.getItem('match3HighScore')) : 0;
     let currentLevel = 1;
 
-    // === ФУНКЦИИ ===
+    // === ЦЕЛИ ПО УРОВНЯМ ===
+    // Каждый уровень требует больше очков
+    const LEVEL_GOALS = [500, 800, 1200, 1600, 2000, 2500];
+
+    // === ФУНКЦИЯ ПОКАЗА ВСПЛЫВАЮЩЕГО ОКНА ===
+    function showNotification(text, callback) {
+      document.getElementById('notification-text').textContent = text;
+      const notif = document.getElementById('notification');
+      notif.style.display = 'flex'; // показываем
+      document.getElementById('next-level-btn').onclick = () => {
+        notif.style.display = 'none'; // скрываем
+        callback(); // запускаем следующий уровень
+      };
+    }
+
+    // === ЗАПУСК УРОВНЯ ===
+    function startLevel(level) {
+      currentLevel = level;
+      score = 0;
+      document.getElementById('score').textContent = `Счёт: ${score}`;
+      document.getElementById('level-display').textContent = `Уровень: ${level}`;
+      document.getElementById('goal').textContent = `Цель: ${LEVEL_GOALS[level - 1]}`;
+      board = generateBoard();
+      renderBoard();
+    }
+
+    // === ЗВУК ПРИ СОВПАДЕНИИ ===
+    let audioContext = null;
     function playSuccessSound() {
-      let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       oscillator.connect(gainNode);
@@ -211,6 +225,7 @@
       oscillator.stop(audioContext.currentTime + 0.2);
     }
 
+    // === ЧАСТИЦЫ ПРИ УДАЛЕНИИ ФИШЕК ===
     function createParticles(x, y, color, count = 8) {
       const gameEl = document.getElementById('game');
       for (let i = 0; i < count; i++) {
@@ -226,7 +241,10 @@
         const vy = Math.sin(angle) * speed;
         let opacity = 1;
         const animate = () => {
-          if (opacity <= 0) { particle.remove(); return; }
+          if (opacity <= 0) {
+            particle.remove();
+            return;
+          }
           const newX = parseFloat(particle.style.left) + vx * 0.02;
           const newY = parseFloat(particle.style.top) + vy * 0.02;
           opacity -= 0.03;
@@ -239,6 +257,7 @@
       }
     }
 
+    // === ГЕНЕРАЦИЯ ДОСКИ БЕЗ НАЧАЛЬНЫХ СОВПАДЕНИЙ ===
     function generateBoard() {
       const b = Array(ROWS).fill().map(() => Array(COLS).fill(null));
       for (let r = 0; r < ROWS; r++) {
@@ -256,37 +275,51 @@
       return b;
     }
 
+    // === ПОИСК СОВПАДЕНИЙ (3+ В РЯД) ===
     function findMatches() {
       const matches = new Set();
+      // По горизонтали
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c <= COLS - 3; c++) {
           const col = board[r][c];
           if (col && board[r][c+1] === col && board[r][c+2] === col) {
-            let k = c; while (k < COLS && board[r][k] === col) { matches.add(`${r},${k}`); k++; }
+            let k = c;
+            while (k < COLS && board[r][k] === col) {
+              matches.add(`${r},${k}`);
+              k++;
+            }
           }
         }
       }
+      // По вертикали
       for (let c = 0; c < COLS; c++) {
         for (let r = 0; r <= ROWS - 3; r++) {
           const col = board[r][c];
           if (col && board[r+1][c] === col && board[r+2][c] === col) {
-            let k = r; while (k < ROWS && board[k][c] === col) { matches.add(`${k},${c}`); k++; }
+            let k = r;
+            while (k < ROWS && board[k][c] === col) {
+              matches.add(`${k},${c}`);
+              k++;
+            }
           }
         }
       }
       return matches;
     }
 
+    // === УДАЛЕНИЕ СОВПАДЕНИЙ И ЗАПОЛНЕНИЕ СВЕРХУ ===
     function removeMatchesAndRefill(matches) {
       if (matches.size > 0) {
         playSuccessSound();
         score += matches.size * 10;
         document.getElementById('score').textContent = `Счёт: ${score}`;
+        // Обновление рекорда (только в бесконечном режиме, но пока везде)
         if (score > highScore) {
           highScore = score;
           localStorage.setItem('match3HighScore', highScore);
           document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
         }
+        // Частицы
         const gameEl = document.getElementById('game');
         const rect = gameEl.getBoundingClientRect();
         matches.forEach(pos => {
@@ -297,10 +330,12 @@
           createParticles(x, y, color);
         });
       }
+      // Удаляем совпадения
       matches.forEach(pos => {
         const [r, c] = pos.split(',').map(Number);
         board[r][c] = null;
       });
+      // Заполняем пустоты новыми фишками сверху
       for (let c = 0; c < COLS; c++) {
         const colVals = [];
         for (let r = ROWS - 1; r >= 0; r--) {
@@ -314,27 +349,31 @@
         }
       }
       renderBoard(matches);
+      // Проверяем цепные реакции
       setTimeout(() => {
         const newMatches = findMatches();
         if (newMatches.size > 0) {
           removeMatchesAndRefill(newMatches);
         } else {
-          const goal = LEVEL_GOALS[currentLevel - 1];
+          // Проверка выполнения цели уровня
+          const goal = LEVEL_GOALS[currentLevel - 1] || LEVEL_GOALS[LEVEL_GOALS.length - 1];
           if (score >= goal) {
             if (currentLevel < LEVEL_GOALS.length) {
               showNotification(`Уровень ${currentLevel} пройден!`, () => startLevel(currentLevel + 1));
             } else {
-              showNotification('Все уровни пройдены!', () => startLevel(1));
+              showNotification('Поздравляем! Все уровни пройдены!', () => startLevel(1));
             }
           }
         }
       }, 400);
     }
 
+    // === ПОПЫТКА ОБМЕНА ФИШЕК ===
     function attemptSwap(r1, c1, r2, c2) {
       [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
       const matches = findMatches();
       if (matches.size === 0) {
+        // Откат, если нет совпадений
         [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
         renderBoard();
       } else {
@@ -343,6 +382,7 @@
       }
     }
 
+    // === ОТРИСОВКА ДОСКИ ===
     function renderBoard(highlightMatches = new Set()) {
       const gameEl = document.getElementById('game');
       gameEl.innerHTML = '';
@@ -364,6 +404,7 @@
       }
     }
 
+    // === ОПРЕДЕЛЕНИЕ КЛЕТКИ ПО КООРДИНАТАМ ЭКРАНА ===
     function getCellFromPoint(x, y) {
       if (!gameRect) return null;
       const pad = 6;
@@ -378,6 +419,7 @@
       return null;
     }
 
+    // === СОЗДАНИЕ КЛОНА ФИШКИ ПРИ ПЕРЕТАСКИВАНИИ ===
     function createDraggingClone(color, clientX, clientY) {
       if (draggingClone) draggingClone.remove();
       draggingClone = document.createElement('div');
@@ -389,6 +431,7 @@
       updateDraggingPosition(clientX, clientY);
     }
 
+    // === ОБНОВЛЕНИЕ ПОЗИЦИИ КЛОНА ===
     function updateDraggingPosition(clientX, clientY) {
       if (!draggingClone) return;
       const centerX = gameRect.left + 6 + startCol * (cellSize + 2) + cellSize / 2;
@@ -411,6 +454,7 @@
       draggingClone.style.top = `${finalY}px`;
     }
 
+    // === УДАЛЕНИЕ КЛОНА ===
     function removeDraggingClone() {
       if (draggingClone) {
         draggingClone.remove();
@@ -418,34 +462,11 @@
       }
     }
 
-    function startLevel(level) {
-      currentLevel = level;
-      score = 0;
-      document.getElementById('score').textContent = `Счёт: ${score}`;
-      document.getElementById('level').textContent = `Уровень: ${level}`;
-      document.getElementById('goal').textContent = `Цель: ${LEVEL_GOALS[level - 1]}`;
-      board = generateBoard();
-      renderBoard();
-    }
-
-    function showNotification(text, callback) {
-      document.getElementById('notification-text').textContent = text;
-      document.getElementById('notification').style.display = 'flex';
-      document.getElementById('next-level-btn').onclick = () => {
-        document.getElementById('notification').style.display = 'none';
-        callback();
-      };
-    }
-
-    // === TOUCH ===
+    // === TOUCH-ОБРАБОТЧИКИ (ТОЛЬКО ДЛЯ ANDROID) ===
     document.addEventListener('touchstart', e => {
-      if (document.getElementById('notification').style.display === 'flex' || 
-          document.getElementById('settings').style.display === 'flex') return;
+      // Блокируем, если открыто уведомление
+      if (document.getElementById('notification').style.display === 'flex') return;
       if (e.touches.length !== 1) return;
-      
-      // 🔑 КРИТИЧЕСКИ ВАЖНО: обновить размеры перед началом
-      renderBoard(); // ← это гарантирует актуальный gameRect
-
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
       const cell = getCellFromPoint(x, y);
@@ -458,8 +479,7 @@
     }, { passive: false });
 
     document.addEventListener('touchmove', e => {
-      if (document.getElementById('notification').style.display === 'flex' || 
-          document.getElementById('settings').style.display === 'flex') return;
+      if (document.getElementById('notification').style.display === 'flex') return;
       if (!isDown || e.touches.length !== 1) return;
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
@@ -468,8 +488,7 @@
     }, { passive: false });
 
     document.addEventListener('touchend', e => {
-      if (document.getElementById('notification').style.display === 'flex' || 
-          document.getElementById('settings').style.display === 'flex') return;
+      if (document.getElementById('notification').style.display === 'flex') return;
       if (!isDown) return;
       removeDraggingClone();
       if (e.changedTouches.length === 0) return;
@@ -510,28 +529,14 @@
       startCol = -1;
     }, { passive: false });
 
-    // === НАСТРОЙКИ ===
-    document.getElementById('settings-btn').onclick = () => {
-      document.getElementById('settings').style.display = 'flex';
-    };
-    document.getElementById('close-settings').onclick = () => {
-      document.getElementById('settings').style.display = 'none';
-    };
-    document.getElementById('theme-select').onchange = (e) => {
-      theme = e.target.value;
-      localStorage.setItem('match3Theme', theme);
-      document.body.classList.toggle('dark', theme === 'dark');
-    };
-    document.getElementById('shape-select').onchange = (e) => {
-      shape = e.target.value;
-      localStorage.setItem('match3Shape', shape);
-      document.body.classList.toggle('round', shape === 'round');
-    };
+    // === ЗАЩИТА ОТ СТАНДАРТНЫХ ДЕЙСТВИЙ ===
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('selectstart', e => e.preventDefault());
 
-    // === СТАРТ ===
+    // === ИНИЦИАЛИЗАЦИЯ ИГРЫ ===
     window.addEventListener('load', () => {
       document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
-      startLevel(1);
+      startLevel(1); // запуск первого уровня
     });
   </script>
 </body>
