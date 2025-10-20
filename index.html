@@ -18,7 +18,7 @@
       text-align: center;
       margin-bottom: 8px;
     }
-    #score, #level-display, #high-score {
+    #score, #level-display {
       font-size: 20px;
       font-weight: bold;
       color: #333;
@@ -78,13 +78,9 @@
       align-items: center;
       justify-content: center;
       z-index: 999;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s;
     }
-    #notification.show {
-      opacity: 1;
-      pointer-events: all;
+    #notification.hidden {
+      display: none;
     }
     #notification-content {
       background: white;
@@ -115,7 +111,7 @@
   </div>
   <div id="game"></div>
 
-  <div id="notification">
+  <div id="notification" class="hidden">
     <div id="notification-content">
       <h2 id="notification-text">Уровень пройден!</h2>
       <button id="next-level-btn">Далее</button>
@@ -136,16 +132,16 @@
     let draggingClone = null;
     let currentLevel = 1;
 
-    // Цели по уровням
     const LEVEL_GOALS = [500, 800, 1200, 1600, 2000, 2500];
 
     function showNotification(text, callback) {
       document.getElementById('notification-text').textContent = text;
       const notif = document.getElementById('notification');
-      notif.classList.add('show');
+      notif.classList.remove('hidden');
       document.getElementById('next-level-btn').onclick = () => {
-        notif.classList.remove('show');
-        setTimeout(callback, 300);
+        notif.classList.add('hidden');
+        // Задержка не нужна — сразу вызываем
+        callback();
       };
     }
 
@@ -158,7 +154,7 @@
       renderBoard();
     }
 
-    // === Звук ===
+    // === Звук и частицы (как в "идеально.txt") ===
     let audioContext = null;
     function playSuccessSound() {
       if (!audioContext) {
@@ -177,7 +173,6 @@
       oscillator.stop(audioContext.currentTime + 0.2);
     }
 
-    // === Частицы ===
     function createParticles(x, y, color, count = 8) {
       const gameEl = document.getElementById('game');
       for (let i = 0; i < count; i++) {
@@ -261,7 +256,6 @@
         playSuccessSound();
         score += matches.size * 10;
         document.getElementById('score').textContent = `Счёт: ${score}`;
-
         const gameEl = document.getElementById('game');
         const rect = gameEl.getBoundingClientRect();
         matches.forEach(pos => {
@@ -294,7 +288,6 @@
         if (newMatches.size > 0) {
           removeMatchesAndRefill(newMatches);
         } else {
-          // Проверка цели
           const goal = LEVEL_GOALS[currentLevel - 1] || LEVEL_GOALS[LEVEL_GOALS.length - 1];
           if (score >= goal) {
             if (currentLevel < LEVEL_GOALS.length) {
@@ -395,8 +388,11 @@
       }
     }
 
-    // === Только Touch (Android) ===
+    // === Touch обработчики (как в "идеально.txt") ===
     document.addEventListener('touchstart', e => {
+      if (document.getElementById('notification').classList.contains('hidden') === false) {
+        return; // блокируем, если уведомление активно
+      }
       if (e.touches.length !== 1) return;
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
@@ -410,6 +406,7 @@
     }, { passive: false });
 
     document.addEventListener('touchmove', e => {
+      if (document.getElementById('notification').classList.contains('hidden') === false) return;
       if (!isDown || e.touches.length !== 1) return;
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
@@ -418,6 +415,7 @@
     }, { passive: false });
 
     document.addEventListener('touchend', e => {
+      if (document.getElementById('notification').classList.contains('hidden') === false) return;
       if (!isDown) return;
       removeDraggingClone();
       if (e.changedTouches.length === 0) return;
