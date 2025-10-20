@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
-  <title>3 в ряд — Режимы</title>
+  <title>3 в ряд — Уровни</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -18,10 +18,13 @@
       text-align: center;
       margin-bottom: 8px;
     }
-    #score, #goal, #high-score {
+    #score, #level-display, #high-score {
       font-size: 20px;
       font-weight: bold;
       color: #333;
+    }
+    #level-display {
+      color: #2196f3;
     }
     #game {
       position: relative;
@@ -66,48 +69,57 @@
       from { transform: translateY(-100px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
-    /* Модальное окно */
-    #mode-select {
+    /* Всплывающее окно */
+    #notification {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.7);
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
-      color: white;
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
     }
-    #mode-select h2 {
-      margin-bottom: 20px;
+    #notification.show {
+      opacity: 1;
+      pointer-events: all;
     }
-    .mode-btn {
-      padding: 12px 24px;
-      margin: 8px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
-      background: #4caf50;
-      color: white;
-      cursor: pointer;
+    #notification-content {
+      background: white;
+      padding: 24px 32px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 80%;
     }
-    .mode-btn:nth-child(3) {
+    #notification-content h2 {
+      margin: 0 0 16px;
+      color: #333;
+    }
+    #notification-content button {
+      padding: 10px 20px;
       background: #2196f3;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 18px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
   <div id="score-container">
     <div id="score">Счёт: 0</div>
-    <div id="goal" style="display:none;">Цель: 500</div>
-    <div id="high-score">Рекорд: 0</div>
+    <div id="level-display">Уровень: 1</div>
   </div>
   <div id="game"></div>
 
-  <div id="mode-select">
-    <h2>Выберите режим</h2>
-    <button class="mode-btn" onclick="startGame('endless')">Бесконечный</button>
-    <button class="mode-btn" onclick="startGame('levels')">Уровни</button>
+  <div id="notification">
+    <div id="notification-content">
+      <h2 id="notification-text">Уровень пройден!</h2>
+      <button id="next-level-btn">Далее</button>
+    </div>
   </div>
 
   <script>
@@ -122,48 +134,26 @@
     let gameRect = null;
     let cellSize = 0;
     let draggingClone = null;
-    let gameMode = null;
     let currentLevel = 1;
-    let highScore = localStorage.getItem('match3HighScore') ? parseInt(localStorage.getItem('match3HighScore')) : 0;
 
-    // Уровни: только цели по очкам
-    const LEVEL_GOALS = [500, 700, 1000, 1300, 1600, 2000];
+    // Цели по уровням
+    const LEVEL_GOALS = [500, 800, 1200, 1600, 2000, 2500];
 
-    function startGame(mode) {
-      gameMode = mode;
-      currentLevel = 1;
-      document.getElementById('mode-select').style.display = 'none';
-      resetGame();
+    function showNotification(text, callback) {
+      document.getElementById('notification-text').textContent = text;
+      const notif = document.getElementById('notification');
+      notif.classList.add('show');
+      document.getElementById('next-level-btn').onclick = () => {
+        notif.classList.remove('show');
+        setTimeout(callback, 300);
+      };
     }
 
-    function resetGame() {
+    function startLevel(level) {
+      currentLevel = level;
       score = 0;
       document.getElementById('score').textContent = `Счёт: ${score}`;
-      
-      const goalEl = document.getElementById('goal');
-      if (gameMode === 'levels') {
-        goalEl.style.display = 'block';
-        goalEl.textContent = `Цель: ${LEVEL_GOALS[0]}`;
-        document.getElementById('high-score').textContent = '';
-      } else {
-        goalEl.style.display = 'none';
-        document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
-      }
-
-      board = generateBoard();
-      renderBoard();
-    }
-
-    function nextLevel() {
-      if (currentLevel >= LEVEL_GOALS.length) {
-        alert('Поздравляем! Вы прошли все уровни!');
-        startGame('endless'); // вернуться в главное меню
-        return;
-      }
-      currentLevel++;
-      document.getElementById('goal').textContent = `Цель: ${LEVEL_GOALS[currentLevel - 1]}`;
-      score = 0;
-      document.getElementById('score').textContent = `Счёт: ${score}`;
+      document.getElementById('level-display').textContent = `Уровень: ${level}`;
       board = generateBoard();
       renderBoard();
     }
@@ -272,12 +262,6 @@
         score += matches.size * 10;
         document.getElementById('score').textContent = `Счёт: ${score}`;
 
-        if (gameMode === 'endless' && score > highScore) {
-          highScore = score;
-          localStorage.setItem('match3HighScore', highScore);
-          document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
-        }
-
         const gameEl = document.getElementById('game');
         const rect = gameEl.getBoundingClientRect();
         matches.forEach(pos => {
@@ -310,14 +294,13 @@
         if (newMatches.size > 0) {
           removeMatchesAndRefill(newMatches);
         } else {
-          // Проверка победы в уровнях
-          if (gameMode === 'levels') {
-            const goal = LEVEL_GOALS[currentLevel - 1];
-            if (score >= goal) {
-              setTimeout(() => {
-                alert(`Уровень ${currentLevel} пройден!`);
-                nextLevel();
-              }, 300);
+          // Проверка цели
+          const goal = LEVEL_GOALS[currentLevel - 1] || LEVEL_GOALS[LEVEL_GOALS.length - 1];
+          if (score >= goal) {
+            if (currentLevel < LEVEL_GOALS.length) {
+              showNotification(`Уровень ${currentLevel} пройден!`, () => startLevel(currentLevel + 1));
+            } else {
+              showNotification('Поздравляем! Все уровни пройдены!', () => startLevel(1));
             }
           }
         }
@@ -360,23 +343,19 @@
 
     function getCellFromPoint(x, y) {
       if (!gameRect) return null;
-      const totalPadding = 6;
-      const left = gameRect.left + totalPadding;
-      const top = gameRect.top + totalPadding;
-      const width = gameRect.width - totalPadding * 2;
-      const height = gameRect.height - totalPadding * 2;
-      if (x < left || x > left + width || y < top || y > top + height) {
-        return null;
-      }
+      const pad = 6;
+      const left = gameRect.left + pad;
+      const top = gameRect.top + pad;
+      const width = gameRect.width - pad * 2;
+      const height = gameRect.height - pad * 2;
+      if (x < left || x > left + width || y < top || y > top + height) return null;
       const col = Math.floor((x - left) / (cellSize + 2));
       const row = Math.floor((y - top) / (cellSize + 2));
-      if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
-        return { row, col };
-      }
+      if (row >= 0 && row < ROWS && col >= 0 && col < COLS) return { row, col };
       return null;
     }
 
-    function createDraggingClone(color, x, y) {
+    function createDraggingClone(color, clientX, clientY) {
       if (draggingClone) draggingClone.remove();
       draggingClone = document.createElement('div');
       draggingClone.id = 'dragging-clone';
@@ -384,14 +363,29 @@
       draggingClone.style.height = `${cellSize}px`;
       draggingClone.style.backgroundColor = color;
       document.body.appendChild(draggingClone);
-      updateDraggingPosition(x, y);
+      updateDraggingPosition(clientX, clientY);
     }
 
-    function updateDraggingPosition(x, y) {
-      if (draggingClone) {
-        draggingClone.style.left = `${x}px`;
-        draggingClone.style.top = `${y}px`;
+    function updateDraggingPosition(clientX, clientY) {
+      if (!draggingClone) return;
+      const centerX = gameRect.left + 6 + startCol * (cellSize + 2) + cellSize / 2;
+      const centerY = gameRect.top + 6 + startRow * (cellSize + 2) + cellSize / 2;
+      let dx = clientX - centerX;
+      let dy = clientY - centerY;
+      const max = cellSize * 0.9;
+      dx = Math.max(-max, Math.min(max, dx));
+      dy = Math.max(-max, Math.min(max, dy));
+      let finalX = centerX;
+      let finalY = centerY;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > cellSize / 3 && startCol < COLS - 1) finalX = centerX + (cellSize + 2);
+        else if (dx < -cellSize / 3 && startCol > 0) finalX = centerX - (cellSize + 2);
+      } else {
+        if (dy > cellSize / 3 && startRow < ROWS - 1) finalY = centerY + (cellSize + 2);
+        else if (dy < -cellSize / 3 && startRow > 0) finalY = centerY - (cellSize + 2);
       }
+      draggingClone.style.left = `${finalX}px`;
+      draggingClone.style.top = `${finalY}px`;
     }
 
     function removeDraggingClone() {
@@ -401,7 +395,7 @@
       }
     }
 
-    // === Ввод (только touch для Android) ===
+    // === Только Touch (Android) ===
     document.addEventListener('touchstart', e => {
       if (e.touches.length !== 1) return;
       const x = e.touches[0].clientX;
@@ -429,13 +423,35 @@
       if (e.changedTouches.length === 0) return;
       const x = e.changedTouches[0].clientX;
       const y = e.changedTouches[0].clientY;
-      const endCell = getCellFromPoint(x, y);
-      if (endCell) {
-        const dr = Math.abs(startRow - endCell.row);
-        const dc = Math.abs(startCol - endCell.col);
-        if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
-          attemptSwap(startRow, startCol, endCell.row, endCell.col);
+      const pad = 6;
+      const left = gameRect.left + pad;
+      const top = gameRect.top + pad;
+      const centerX = left + startCol * (cellSize + 2) + cellSize / 2;
+      const centerY = top + startRow * (cellSize + 2) + cellSize / 2;
+      const candidates = [
+        { r: startRow, c: startCol },
+        { r: startRow - 1, c: startCol },
+        { r: startRow + 1, c: startCol },
+        { r: startRow, c: startCol - 1 },
+        { r: startRow, c: startCol + 1 }
+      ];
+      let best = null;
+      let minDist = Infinity;
+      for (const cand of candidates) {
+        if (cand.r < 0 || cand.r >= ROWS || cand.c < 0 || cand.c >= COLS) continue;
+        const cx = left + cand.c * (cellSize + 2) + cellSize / 2;
+        const cy = top + cand.r * (cellSize + 2) + cellSize / 2;
+        const dist = Math.hypot(x - cx, y - cy);
+        if (dist < minDist) {
+          minDist = dist;
+          best = cand;
         }
+      }
+      if (best && (best.r !== startRow || best.c !== startCol) &&
+          (Math.abs(best.r - startRow) + Math.abs(best.c - startCol) === 1)) {
+        attemptSwap(startRow, startCol, best.r, best.c);
+      } else {
+        renderBoard();
       }
       isDown = false;
       startRow = -1;
@@ -445,9 +461,8 @@
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('selectstart', e => e.preventDefault());
 
-    // Инициализация
     window.addEventListener('load', () => {
-      document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
+      startLevel(1);
     });
   </script>
 </body>
