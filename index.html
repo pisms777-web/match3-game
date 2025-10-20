@@ -4,48 +4,33 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
   <title>3 в ряд</title>
-  <meta name="theme-color" content="#f0f0f0">
+  <!-- PWA: чтобы появилось "На главный экран" -->
+  <meta name="theme-color" content="#333">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="3 в ряд">
   <link rel="manifest" href="data:application/manifest+json,{
     %22name%22:%223%20в%20ряд%22,
-    %22short_name%22:%22Match3%22,
-    %22start_url%22:%22/%22,
+    %22short_name%22:%223вРяд%22,
+    %22start_url%22:%22./%22,
     %22display%22:%22standalone%22,
     %22background_color%22:%22%23f0f0f0%22,
-    %22theme_color%22:%22%232196f3%22
+    %22theme_color%22:%22%23333333%22,
+    %22icons%22:[{
+      %22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e91e63'/%3E%3C/svg%3E%22,
+      %22sizes%22:%22192x192%22,
+      %22type%22:%22image/svg+xml%22
+    }]
   }">
   <style>
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 0;
+      padding: 8px 8px 12px;
+      background: #f0f0f0;
       font-family: sans-serif;
       overflow: hidden;
       touch-action: none;
-      background: #f0f0f0;
-    }
-    .tabs {
-      display: flex;
-      background: #333;
-      color: white;
-    }
-    .tab {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      background: #444;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .tab.active {
-      background: #2196f3;
-    }
-    .tab-content {
-      display: none;
-      padding: 8px 8px 12px;
-    }
-    .tab-content.active {
-      display: block;
     }
     #score-container {
       text-align: center;
@@ -69,37 +54,19 @@
       max-width: 96vw;
     }
     .cell {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .shape {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .square {
       border-radius: 6px;
+      user-select: none;
+      -webkit-user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .circle {
-      border-radius: 50%;
-    }
-    .hexagon {
-      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-    }
-    .star {
-      font-size: 24px;
-      line-height: 1;
-      color: white;
-      text-shadow: 0 0 4px rgba(0,0,0,0.5);
-    }
-    .cell.falling .shape {
+    .cell.falling {
       animation: fall 0.4s ease-out;
     }
     #dragging-clone {
       position: absolute;
+      border-radius: 6px;
       pointer-events: none;
       z-index: 100;
       transform: translate(-50%, -50%);
@@ -117,79 +84,48 @@
       from { transform: translateY(-100px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
-    #settings-container h3 {
-      margin-top: 0;
+    /* Модальное окно выбора режима */
+    #mode-select {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
     }
-    #bg-color-picker, #shape-select {
-      width: 100%;
-      height: 40px;
-      margin: 10px 0;
-      font-size: 16px;
+    #mode-select h2 {
+      color: white;
+      margin-bottom: 20px;
     }
+    .mode-btn {
+      padding: 12px 24px;
+      margin: 8px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      background: #4caf50;
+      color: white;
+      cursor: pointer;
+    }
+    .mode-btn:nth-child(2) { background: #2196f3; }
   </style>
 </head>
 <body>
-  <div class="tabs">
-    <button id="tab-game" class="tab active" onclick="showTab('game')">Игра</button>
-    <button id="tab-settings" class="tab" onclick="showTab('settings')">Настройки</button>
+  <div id="score-container">
+    <div id="score">Счёт: 0</div>
+    <div id="high-score">Рекорд: 0</div>
   </div>
+  <div id="game"></div>
 
-  <div id="game-container" class="tab-content active">
-    <div id="score-container">
-      <div id="score">Счёт: 0</div>
-      <div id="high-score">Рекорд: 0</div>
-    </div>
-    <div id="game"></div>
-  </div>
-
-  <div id="settings-container" class="tab-content">
-    <h3>Фон страницы</h3>
-    <input type="color" id="bg-color-picker" value="#f0f0f0">
-    
-    <h3>Тип фигур</h3>
-    <select id="shape-select">
-      <option value="square">Квадраты</option>
-      <option value="circle">Круги</option>
-      <option value="hexagon">Шестиугольники</option>
-      <option value="star">Звёзды</option>
-    </select>
-    
-    <p>Изменения применяются сразу.</p>
+  <div id="mode-select">
+    <h2>Выберите режим</h2>
+    <button class="mode-btn" onclick="setMode('endless')">Бесконечный</button>
+    <button class="mode-btn" onclick="setMode('levels')" disabled>Уровни (скоро)</button>
   </div>
 
   <script>
-    // === Настройки ===
-    function showTab(tabName) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-      document.getElementById(tabName + '-container').classList.add('active');
-      document.getElementById('tab-' + tabName).classList.add('active');
-    }
-
-    // Фон
-    const colorPicker = document.getElementById('bg-color-picker');
-    const savedBg = localStorage.getItem('gameBgColor') || '#f0f0f0';
-    colorPicker.value = savedBg;
-    document.body.style.backgroundColor = savedBg;
-    colorPicker.addEventListener('input', (e) => {
-      const color = e.target.value;
-      document.body.style.backgroundColor = color;
-      localStorage.setItem('gameBgColor', color);
-    });
-
-    // Тип фигур
-    const shapeSelect = document.getElementById('shape-select');
-    const savedShape = localStorage.getItem('shapeType') || 'square';
-    shapeSelect.value = savedShape;
-    let currentShapeType = savedShape;
-
-    shapeSelect.addEventListener('change', (e) => {
-      currentShapeType = e.target.value;
-      localStorage.setItem('shapeType', currentShapeType);
-      renderBoard(); // обновить доску
-    });
-
-    // === Игровая логика ===
     const ROWS = 10;
     const COLS = 10;
     const COLORS = ['#e91e63', '#4caf50', '#2196f3', '#ff9800'];
@@ -202,8 +138,23 @@
     let cellSize = 0;
     let draggingClone = null;
     let highScore = localStorage.getItem('match3HighScore') ? parseInt(localStorage.getItem('match3HighScore')) : 0;
+    let gameMode = 'endless'; // 'endless' или 'levels'
 
-    // Звук
+    function setMode(mode) {
+      gameMode = mode;
+      document.getElementById('mode-select').style.display = 'none';
+      initGame();
+    }
+
+    function initGame() {
+      score = 0;
+      document.getElementById('score').textContent = `Счёт: ${score}`;
+      document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
+      board = generateBoard();
+      renderBoard();
+    }
+
+    // === Звук ===
     let audioContext = null;
     function playSuccessSound() {
       if (!audioContext) {
@@ -222,7 +173,7 @@
       oscillator.stop(audioContext.currentTime + 0.2);
     }
 
-    // Частицы
+    // === Частицы ===
     function createParticles(x, y, color, count = 8) {
       const gameEl = document.getElementById('game');
       for (let i = 0; i < count; i++) {
@@ -238,7 +189,10 @@
         const vy = Math.sin(angle) * speed;
         let opacity = 1;
         const animate = () => {
-          if (opacity <= 0) { particle.remove(); return; }
+          if (opacity <= 0) {
+            particle.remove();
+            return;
+          }
           const newX = parseFloat(particle.style.left) + vx * 0.02;
           const newY = parseFloat(particle.style.top) + vy * 0.02;
           opacity -= 0.03;
@@ -251,6 +205,7 @@
       }
     }
 
+    // === Игровая логика ===
     function generateBoard() {
       const b = Array(ROWS).fill().map(() => Array(COLS).fill(null));
       for (let r = 0; r < ROWS; r++) {
@@ -354,9 +309,11 @@
       }
     }
 
+    // === DOM ===
     function renderBoard(highlightMatches = new Set()) {
       const gameEl = document.getElementById('game');
       gameEl.innerHTML = '';
+      // ВАЖНО: обновляем размеры КАЖДЫЙ РАЗ
       gameRect = gameEl.getBoundingClientRect();
       const gap = 2;
       cellSize = (gameRect.width - gap * (COLS - 1)) / COLS;
@@ -364,20 +321,12 @@
         for (let c = 0; c < COLS; c++) {
           const cell = document.createElement('div');
           cell.className = 'cell';
+          cell.style.backgroundColor = board[r][c];
           if (highlightMatches.has(`${r},${c}`)) {
             cell.classList.add('falling');
           }
           cell.dataset.row = r;
           cell.dataset.col = c;
-
-          const shape = document.createElement('div');
-          shape.className = `shape ${currentShapeType}`;
-          if (currentShapeType === 'star') {
-            shape.textContent = '★';
-          } else {
-            shape.style.backgroundColor = board[r][c];
-          }
-          cell.appendChild(shape);
           gameEl.appendChild(cell);
         }
       }
@@ -403,41 +352,10 @@
       draggingClone.id = 'dragging-clone';
       draggingClone.style.width = `${cellSize}px`;
       draggingClone.style.height = `${cellSize}px`;
-
-      const shape = document.createElement('div');
-      shape.className = `shape ${currentShapeType}`;
-      if (currentShapeType === 'star') {
-        shape.textContent = '★';
-        shape.style.color = 'white';
-        shape.style.textShadow = '0 0 4px rgba(0,0,0,0.5)';
-      } else {
-        shape.style.backgroundColor = color;
-      }
-      draggingClone.appendChild(shape);
+      draggingClone.style.backgroundColor = color;
       document.body.appendChild(draggingClone);
-      updateDraggingPosition(clientX, clientY);
-    }
-
-    function updateDraggingPosition(clientX, clientY) {
-      if (!draggingClone) return;
-      const centerX = gameRect.left + 6 + startCol * (cellSize + 2) + cellSize / 2;
-      const centerY = gameRect.top + 6 + startRow * (cellSize + 2) + cellSize / 2;
-      let dx = clientX - centerX;
-      let dy = clientY - centerY;
-      const max = cellSize * 0.9;
-      dx = Math.max(-max, Math.min(max, dx));
-      dy = Math.max(-max, Math.min(max, dy));
-      let finalX = centerX;
-      let finalY = centerY;
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > cellSize / 3 && startCol < COLS - 1) finalX = centerX + (cellSize + 2);
-        else if (dx < -cellSize / 3 && startCol > 0) finalX = centerX - (cellSize + 2);
-      } else {
-        if (dy > cellSize / 3 && startRow < ROWS - 1) finalY = centerY + (cellSize + 2);
-        else if (dy < -cellSize / 3 && startRow > 0) finalY = centerY - (cellSize + 2);
-      }
-      draggingClone.style.left = `${finalX}px`;
-      draggingClone.style.top = `${finalY}px`;
+      draggingClone.style.left = `${clientX}px`;
+      draggingClone.style.top = `${clientY}px`;
     }
 
     function removeDraggingClone() {
@@ -447,9 +365,11 @@
       }
     }
 
-    // === Touch only ===
+    // === Только Touch (Android) ===
     document.addEventListener('touchstart', e => {
       if (e.touches.length !== 1) return;
+      // Убедимся, что размеры актуальны
+      renderBoard(); // ← это решает проблему после смены фигур
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
       const cell = getCellFromPoint(x, y);
@@ -465,7 +385,10 @@
       if (!isDown || e.touches.length !== 1) return;
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
-      updateDraggingPosition(x, y);
+      if (draggingClone) {
+        draggingClone.style.left = `${x}px`;
+        draggingClone.style.top = `${y}px`;
+      }
       e.preventDefault();
     }, { passive: false });
 
@@ -475,11 +398,13 @@
       if (e.changedTouches.length === 0) return;
       const x = e.changedTouches[0].clientX;
       const y = e.changedTouches[0].clientY;
+
       const pad = 6;
       const left = gameRect.left + pad;
       const top = gameRect.top + pad;
       const centerX = left + startCol * (cellSize + 2) + cellSize / 2;
       const centerY = top + startRow * (cellSize + 2) + cellSize / 2;
+
       const candidates = [
         { r: startRow, c: startCol },
         { r: startRow - 1, c: startCol },
@@ -487,7 +412,8 @@
         { r: startRow, c: startCol - 1 },
         { r: startRow, c: startCol + 1 }
       ];
-      let bestCandidate = null;
+
+      let best = null;
       let minDist = Infinity;
       for (const cand of candidates) {
         if (cand.r < 0 || cand.r >= ROWS || cand.c < 0 || cand.c >= COLS) continue;
@@ -496,16 +422,17 @@
         const dist = Math.hypot(x - cx, y - cy);
         if (dist < minDist) {
           minDist = dist;
-          bestCandidate = cand;
+          best = cand;
         }
       }
-      if (bestCandidate &&
-          (bestCandidate.r !== startRow || bestCandidate.c !== startCol) &&
-          (Math.abs(bestCandidate.r - startRow) + Math.abs(bestCandidate.c - startCol) === 1)) {
-        attemptSwap(startRow, startCol, bestCandidate.r, bestCandidate.c);
+
+      if (best && (best.r !== startRow || best.c !== startCol) &&
+          (Math.abs(best.r - startRow) + Math.abs(best.c - startCol) === 1)) {
+        attemptSwap(startRow, startCol, best.r, best.c);
       } else {
         renderBoard();
       }
+
       isDown = false;
       startRow = -1;
       startCol = -1;
@@ -514,10 +441,9 @@
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('selectstart', e => e.preventDefault());
 
+    // Старт
     window.addEventListener('load', () => {
-      document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
-      board = generateBoard();
-      renderBoard();
+      // Рекорд уже загружен
     });
   </script>
 </body>
