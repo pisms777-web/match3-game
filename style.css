@@ -1,0 +1,100 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.tabs {
+  display: flex;
+  background: #333;
+  color: white;
+}
+.tab {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  background: #444;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+.tab.active {
+  background: #2196f3;
+}
+
+.tab-content {
+  display: none;
+  padding: 8px 8px 12px;
+}
+.tab-content.active {
+  display: block;
+}
+
+#score {
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+#game {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(10, 8.8vw);
+  grid-template-rows: repeat(10, 8.8vw);
+  gap: 2px;
+  background: #333;
+  padding: 6px;
+  border-radius: 10px;
+  margin: 0 auto;
+  max-width: 96vw;
+}
+
+.cell {
+  border-radius: 6px;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cell.falling {
+  animation: fall 0.4s ease-out;
+}
+
+#dragging-clone {
+  position: absolute;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+}
+
+.particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 200;
+  opacity: 1;
+}
+
+@keyframes fall {
+  from { transform: translateY(-100px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+#settings-container h3 {
+  margin-top: 0;
+}
+#bg-color-picker {
+  width: 100%;
+  height: 40px;
+  margin: 10px 0;
+}

@@ -1,0 +1,8 @@
+{
+  "name": "3 в ряд",
+  "short_name": "Match3",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f0f0",
+  "theme_color": "#2196f3"
+}
