@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
-  <title>3 в ряд — v2.0</title>
-  <!-- PWA -->
+  <title>3 в ряд — v2.1</title>
   <meta name="theme-color" content="#e91e63">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="apple-touch-icon" href="https://placehold.co/180x180/e91e63/white?text=3вРяд">
@@ -100,7 +99,7 @@
       from { transform: translateY(-100px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
-    #notification {
+    #notification, #settings {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.7);
@@ -109,15 +108,19 @@
       justify-content: center;
       z-index: 999;
     }
-    #notification-content {
+    #notification-content, #settings-content {
       background: white;
       padding: 24px;
       border-radius: 12px;
       text-align: center;
       max-width: 80%;
     }
-    body.dark #notification-content { background: #2a2a2a; color: white; }
-    #notification-content button {
+    body.dark #notification-content,
+    body.dark #settings-content {
+      background: #2a2a2a;
+      color: white;
+    }
+    button {
       padding: 10px 20px;
       background: #2196f3;
       color: white;
@@ -138,16 +141,16 @@
     <button id="settings-btn">⚙️</button>
   </div>
   <div id="game"></div>
+  
   <div id="notification">
     <div id="notification-content">
       <h2 id="notification-text">Уровень пройден!</h2>
       <button id="next-level-btn">Далее</button>
     </div>
   </div>
-
-  <!-- Настройки (скрыты по умолчанию) -->
-  <div id="settings" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
-    <div style="background:white; padding:20px; border-radius:10px; width:80%; max-width:300px;">
+  
+  <div id="settings">
+    <div id="settings-content">
       <h3>Настройки</h3>
       <label>Фон: 
         <select id="theme-select">
@@ -155,18 +158,18 @@
           <option value="dark">Тёмный</option>
         </select>
       </label><br><br>
-      <label>Форма: 
+      <label>Форма фишек: 
         <select id="shape-select">
           <option value="square">Квадраты</option>
           <option value="round">Круги</option>
         </select>
       </label><br><br>
-      <button onclick="document.getElementById('settings').style.display='none'">Закрыть</button>
+      <button id="close-settings">Закрыть</button>
     </div>
   </div>
 
-  <!-- Подключаем ядро -->
   <script src="game-core.js"></script>
+  <script src="drag-handler.js"></script>
   <script>
     // === НАСТРОЙКИ ===
     let theme = localStorage.getItem('match3Theme') || 'light';
@@ -182,73 +185,9 @@
     let score = 0;
     let highScore = localStorage.getItem('match3HighScore') ? parseInt(localStorage.getItem('match3HighScore')) : 0;
 
-    // === ИНИЦИАЛИЗАЦИЯ ЯДРА ===
-    const game = new GameCore({
-      onScoreChange: (points) => {
-        score += points;
-        document.getElementById('score').textContent = `Счёт: ${score}`;
-        if (score > highScore) {
-          highScore = score;
-          localStorage.setItem('match3HighScore', highScore);
-          document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
-        }
-      },
-      onBoardUpdate: (board) => {
-        // ничего не делаем — рендер в ядре
-      },
-      onSwapAttempt: (r1, c1, r2, c2) => {
-        // временная доска для проверки
-        const tempBoard = JSON.parse(JSON.stringify(game.board));
-        [tempBoard[r1][c1], tempBoard[r2][c2]] = [tempBoard[r2][c2], tempBoard[r1][c1]];
-        const matches = new Set();
-        // Проверка совпадений (повторяем логику из ядра)
-        for (let r = 0; r < 10; r++) {
-          for (let c = 0; c <= 7; c++) {
-            const col = tempBoard[r][c];
-            if (col && tempBoard[r][c+1] === col && tempBoard[r][c+2] === col) {
-              let k = c; while (k < 10 && tempBoard[r][k] === col) { matches.add(`${r},${k}`); k++; }
-            }
-          }
-        }
-        for (let c = 0; c < 10; c++) {
-          for (let r = 0; r <= 7; r++) {
-            const col = tempBoard[r][c];
-            if (col && tempBoard[r+1][c] === col && tempBoard[r+2][c] === col) {
-              let k = r; while (k < 10 && tempBoard[k][c] === col) { matches.add(`${k},${c}`); k++; }
-            }
-          }
-        }
-        if (matches.size === 0) {
-          game.renderBoard(); // откат
-        } else {
-          [game.board[r1][c1], game.board[r2][c2]] = [game.board[r2][c2], game.board[r1][c1]];
-          game.renderBoard();
-          setTimeout(() => {
-            game.removeMatchesAndRefill(matches, (pts) => {
-              score += pts;
-              document.getElementById('score').textContent = `Счёт: ${score}`;
-              if (score > highScore) {
-                highScore = score;
-                localStorage.setItem('match3HighScore', highScore);
-                document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
-              }
-              // Проверка цели
-              const goal = LEVEL_GOALS[currentLevel - 1];
-              if (score >= goal) {
-                if (currentLevel < LEVEL_GOALS.length) {
-                  showNotification(`Уровень ${currentLevel} пройден!`, () => {
-                    currentLevel++;
-                    startLevel(currentLevel);
-                  });
-                } else {
-                  showNotification('Все уровни пройдены!', () => startLevel(1));
-                }
-              }
-            });
-          }, 300);
-        }
-      }
-    });
+    // === ИНИЦИАЛИЗАЦИЯ ===
+    const game = new GameCore();
+    let dragHandler = null;
 
     function startLevel(level) {
       currentLevel = level;
@@ -257,6 +196,60 @@
       document.getElementById('level').textContent = `Уровень: ${level}`;
       document.getElementById('goal').textContent = `Цель: ${LEVEL_GOALS[level - 1]}`;
       game.resetBoard();
+      // Пересоздаём DragHandler, чтобы он ссылался на актуальный game
+      if (dragHandler) {
+        // Обработчики уже висят, просто обновляем ссылку
+        dragHandler.gameCore = game;
+      } else {
+        dragHandler = new DragHandler(game, {
+          onSwap: (r1, c1, r2, c2) => {
+            const tempBoard = JSON.parse(JSON.stringify(game.board));
+            [tempBoard[r1][c1], tempBoard[r2][c2]] = [tempBoard[r2][c2], tempBoard[r1][c1]];
+            const matches = new Set();
+            for (let r = 0; r < 10; r++) {
+              for (let c = 0; c <= 7; c++) {
+                const col = tempBoard[r][c];
+                if (col && tempBoard[r][c+1] === col && tempBoard[r][c+2] === col) {
+                  let k = c; while (k < 10 && tempBoard[r][k] === col) { matches.add(`${r},${k}`); k++; }
+                }
+              }
+            }
+            for (let c = 0; c < 10; c++) {
+              for (let r = 0; r <= 7; r++) {
+                const col = tempBoard[r][c];
+                if (col && tempBoard[r+1][c] === col && tempBoard[r+2][c] === col) {
+                  let k = r; while (k < 10 && tempBoard[k][c] === col) { matches.add(`${k},${c}`); k++; }
+                }
+              }
+            }
+            if (matches.size === 0) {
+              game.renderBoard();
+            } else {
+              [game.board[r1][c1], game.board[r2][c2]] = [game.board[r2][c2], game.board[r1][c1]];
+              game.renderBoard();
+              setTimeout(() => {
+                game.removeMatchesAndRefill(matches, (pts) => {
+                  score += pts;
+                  document.getElementById('score').textContent = `Счёт: ${score}`;
+                  if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('match3HighScore', highScore);
+                    document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
+                  }
+                  const goal = LEVEL_GOALS[currentLevel - 1];
+                  if (score >= goal) {
+                    if (currentLevel < LEVEL_GOALS.length) {
+                      showNotification(`Уровень ${currentLevel} пройден!`, () => startLevel(currentLevel + 1));
+                    } else {
+                      showNotification('Все уровни пройдены!', () => startLevel(1));
+                    }
+                  }
+                });
+              }, 300);
+            }
+          }
+        });
+      }
     }
 
     function showNotification(text, callback) {
@@ -268,41 +261,18 @@
       };
     }
 
-    // === TOUCH ===
-    document.addEventListener('touchstart', e => {
-      if (document.getElementById('notification').style.display === 'flex' || 
-          document.getElementById('settings').style.display === 'block') return;
-      if (e.touches.length !== 1) return;
-      game.handleTouchStart(e.touches[0].clientX, e.touches[0].clientY);
-      e.preventDefault();
-    }, { passive: false });
-
-    document.addEventListener('touchmove', e => {
-      if (document.getElementById('notification').style.display === 'flex' || 
-          document.getElementById('settings').style.display === 'block') return;
-      if (e.touches.length !== 1) return;
-      game.handleTouchMove(e.touches[0].clientX, e.touches[0].clientY);
-      e.preventDefault();
-    }, { passive: false });
-
-    document.addEventListener('touchend', e => {
-      if (document.getElementById('notification').style.display === 'flex' || 
-          document.getElementById('settings').style.display === 'block') return;
-      if (e.changedTouches.length === 0) return;
-      game.handleTouchEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-    }, { passive: false });
-
     // === НАСТРОЙКИ ===
     document.getElementById('settings-btn').onclick = () => {
       document.getElementById('settings').style.display = 'flex';
     };
-
+    document.getElementById('close-settings').onclick = () => {
+      document.getElementById('settings').style.display = 'none';
+    };
     document.getElementById('theme-select').onchange = (e) => {
       theme = e.target.value;
       localStorage.setItem('match3Theme', theme);
       document.body.classList.toggle('dark', theme === 'dark');
     };
-
     document.getElementById('shape-select').onchange = (e) => {
       shape = e.target.value;
       localStorage.setItem('match3Shape', shape);
