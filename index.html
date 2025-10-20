@@ -3,16 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
-  <title>3 в ряд — Уровни</title>
-
-  <!-- === PWA МЕТАДАННЫЕ === -->
-  <!-- Эти теги позволяют Android браузеру показывать "Добавить на главный экран" -->
+  <title>3 в ряд — v2.0</title>
+  <!-- PWA -->
   <meta name="theme-color" content="#e91e63">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="3 в ряд">
   <link rel="apple-touch-icon" href="https://placehold.co/180x180/e91e63/white?text=3вРяд">
-  <link rel="manifest" href="data:application/manifest+json,{
+  <link rel="manifest" href="application/manifest+json,{
     %22name%22:%223%20в%20ряд%22,
     %22short_name%22:%223вРяд%22,
     %22start_url%22:%22./%22,
@@ -23,15 +19,9 @@
       %22src%22:%22https://placehold.co/192x192/e91e63/white?text=3вРяд%22,
       %22sizes%22:%22192x192%22,
       %22type%22:%22image/png%22
-    },{
-      %22src%22:%22https://placehold.co/512x512/e91e63/white?text=3вРяд%22,
-      %22sizes%22:%22512x512%22,
-      %22type%22:%22image/png%22
     }]
   }">
-
   <style>
-    /* === ОБЩИЕ СТИЛИ === */
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -41,22 +31,35 @@
       overflow: hidden;
       touch-action: none;
     }
-
-    /* === ЗАГОЛОВОК СО СЧЁТОМ, УРОВНЕМ И ЦЕЛЬЮ === */
-    #score-container {
-      text-align: center;
+    body.dark { background: #1e1e1e; }
+    #header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 8px;
     }
-    #score, #level-display, #goal, #high-score {
+    #score-container { text-align: center; flex: 1; }
+    #score, #level, #goal, #high-score {
       font-size: 20px;
       font-weight: bold;
       color: #333;
     }
-    #level-display {
-      color: #2196f3; /* синий — для акцента на уровне */
+    body.dark #score,
+    body.dark #level,
+    body.dark #goal,
+    body.dark #high-score {
+      color: #f0f0f0;
     }
-
-    /* === ИГРОВОЕ ПОЛЕ === */
+    #settings-btn {
+      background: #2196f3;
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+    }
     #game {
       position: relative;
       display: grid;
@@ -71,26 +74,19 @@
     }
     .cell {
       border-radius: 6px;
-      user-select: none;
-      -webkit-user-select: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
-    .cell.falling {
-      animation: fall 0.4s ease-out;
+    body.round .cell {
+      border-radius: 50%;
     }
-
-    /* === КЛОН ПЕРЕТАСКИВАЕМОЙ ФИШКИ === */
     #dragging-clone {
       position: absolute;
-      border-radius: 6px;
       pointer-events: none;
       z-index: 100;
       transform: translate(-50%, -50%);
     }
-
-    /* === ЧАСТИЦЫ ПРИ УДАЛЕНИИ === */
+    body.round #dragging-clone {
+      border-radius: 50%;
+    }
     .particle {
       position: absolute;
       width: 8px;
@@ -104,52 +100,44 @@
       from { transform: translateY(-100px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
-
-    /* === ВСПЛЫВАЮЩЕЕ ОКНО "УРОВЕНЬ ПРОЙДЕН" === */
     #notification {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.7);
-      display: none; /* по умолчанию скрыто */
+      display: none;
       align-items: center;
       justify-content: center;
       z-index: 999;
     }
     #notification-content {
       background: white;
-      padding: 24px 32px;
+      padding: 24px;
       border-radius: 12px;
       text-align: center;
       max-width: 80%;
     }
-    #notification-content h2 {
-      margin: 0 0 16px;
-      color: #333;
-    }
+    body.dark #notification-content { background: #2a2a2a; color: white; }
     #notification-content button {
       padding: 10px 20px;
       background: #2196f3;
       color: white;
       border: none;
       border-radius: 6px;
-      font-size: 18px;
       cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <!-- === ОТОБРАЖЕНИЕ СЧЁТА, УРОВНЯ, ЦЕЛИ И РЕКОРДА === -->
-  <div id="score-container">
-    <div id="score">Счёт: 0</div>
-    <div id="level-display">Уровень: 1</div>
-    <div id="goal">Цель: 500</div>
-    <div id="high-score">Рекорд: 0</div>
+  <div id="header">
+    <div id="score-container">
+      <div id="score">Счёт: 0</div>
+      <div id="level">Уровень: 1</div>
+      <div id="goal">Цель: 500</div>
+      <div id="high-score">Рекорд: 0</div>
+    </div>
+    <button id="settings-btn">⚙️</button>
   </div>
-
-  <!-- === ИГРОВОЕ ПОЛЕ === -->
   <div id="game"></div>
-
-  <!-- === ВСПЛЫВАЮЩЕЕ ОКНО ПРИ ПРОХОЖДЕНИИ УРОВНЯ === -->
   <div id="notification">
     <div id="notification-content">
       <h2 id="notification-text">Уровень пройден!</h2>
@@ -157,386 +145,174 @@
     </div>
   </div>
 
+  <!-- Настройки (скрыты по умолчанию) -->
+  <div id="settings" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:white; padding:20px; border-radius:10px; width:80%; max-width:300px;">
+      <h3>Настройки</h3>
+      <label>Фон: 
+        <select id="theme-select">
+          <option value="light">Светлый</option>
+          <option value="dark">Тёмный</option>
+        </select>
+      </label><br><br>
+      <label>Форма: 
+        <select id="shape-select">
+          <option value="square">Квадраты</option>
+          <option value="round">Круги</option>
+        </select>
+      </label><br><br>
+      <button onclick="document.getElementById('settings').style.display='none'">Закрыть</button>
+    </div>
+  </div>
+
+  <!-- Подключаем ядро -->
+  <script src="game-core.js"></script>
   <script>
-    // === ВЕРСИЯ ИГРЫ ===
-    // Версия: v1.0
-    // Основана на "3 в ряд — идеально.txt"
-    // Добавлены: уровни, цель, уведомление, PWA, отображение уровня
+    // === НАСТРОЙКИ ===
+    let theme = localStorage.getItem('match3Theme') || 'light';
+    let shape = localStorage.getItem('match3Shape') || 'square';
+    document.body.classList.toggle('dark', theme === 'dark');
+    document.body.classList.toggle('round', shape === 'round');
+    document.getElementById('theme-select').value = theme;
+    document.getElementById('shape-select').value = shape;
 
-    // === КОНСТАНТЫ ===
-    const ROWS = 10;
-    const COLS = 10;
-    const COLORS = ['#e91e63', '#4caf50', '#2196f3', '#ff9800'];
-
-    // === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
-    let score = 0;
-    let board = [];
-    let isDown = false;
-    let startRow = -1;
-    let startCol = -1;
-    let gameRect = null;
-    let cellSize = 0;
-    let draggingClone = null;
-    let highScore = localStorage.getItem('match3HighScore') ? parseInt(localStorage.getItem('match3HighScore')) : 0;
-    let currentLevel = 1;
-
-    // === ЦЕЛИ ПО УРОВНЯМ ===
-    // Каждый уровень требует больше очков
+    // === УРОВНИ ===
     const LEVEL_GOALS = [500, 800, 1200, 1600, 2000, 2500];
+    let currentLevel = 1;
+    let score = 0;
+    let highScore = localStorage.getItem('match3HighScore') ? parseInt(localStorage.getItem('match3HighScore')) : 0;
 
-    // === ФУНКЦИЯ ПОКАЗА ВСПЛЫВАЮЩЕГО ОКНА ===
-    function showNotification(text, callback) {
-      document.getElementById('notification-text').textContent = text;
-      const notif = document.getElementById('notification');
-      notif.style.display = 'flex'; // показываем
-      document.getElementById('next-level-btn').onclick = () => {
-        notif.style.display = 'none'; // скрываем
-        callback(); // запускаем следующий уровень
-      };
-    }
-
-    // === ЗАПУСК УРОВНЯ ===
-    function startLevel(level) {
-      currentLevel = level;
-      score = 0;
-      document.getElementById('score').textContent = `Счёт: ${score}`;
-      document.getElementById('level-display').textContent = `Уровень: ${level}`;
-      document.getElementById('goal').textContent = `Цель: ${LEVEL_GOALS[level - 1]}`;
-      board = generateBoard();
-      renderBoard();
-    }
-
-    // === ЗВУК ПРИ СОВПАДЕНИИ ===
-    let audioContext = null;
-    function playSuccessSound() {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(300, audioContext.currentTime + 0.2);
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.2);
-    }
-
-    // === ЧАСТИЦЫ ПРИ УДАЛЕНИИ ФИШЕК ===
-    function createParticles(x, y, color, count = 8) {
-      const gameEl = document.getElementById('game');
-      for (let i = 0; i < count; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'particle';
-        particle.style.backgroundColor = color;
-        particle.style.left = `${x}px`;
-        particle.style.top = `${y}px`;
-        gameEl.appendChild(particle);
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 30 + Math.random() * 40;
-        const vx = Math.cos(angle) * speed;
-        const vy = Math.sin(angle) * speed;
-        let opacity = 1;
-        const animate = () => {
-          if (opacity <= 0) {
-            particle.remove();
-            return;
-          }
-          const newX = parseFloat(particle.style.left) + vx * 0.02;
-          const newY = parseFloat(particle.style.top) + vy * 0.02;
-          opacity -= 0.03;
-          particle.style.left = `${newX}px`;
-          particle.style.top = `${newY}px`;
-          particle.style.opacity = opacity;
-          requestAnimationFrame(animate);
-        };
-        requestAnimationFrame(animate);
-      }
-    }
-
-    // === ГЕНЕРАЦИЯ ДОСКИ БЕЗ НАЧАЛЬНЫХ СОВПАДЕНИЙ ===
-    function generateBoard() {
-      const b = Array(ROWS).fill().map(() => Array(COLS).fill(null));
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          let color;
-          do {
-            color = COLORS[Math.floor(Math.random() * COLORS.length)];
-          } while (
-            (r >= 2 && b[r-1][c] === color && b[r-2][c] === color) ||
-            (c >= 2 && b[r][c-1] === color && b[r][c-2] === color)
-          );
-          b[r][c] = color;
-        }
-      }
-      return b;
-    }
-
-    // === ПОИСК СОВПАДЕНИЙ (3+ В РЯД) ===
-    function findMatches() {
-      const matches = new Set();
-      // По горизонтали
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c <= COLS - 3; c++) {
-          const col = board[r][c];
-          if (col && board[r][c+1] === col && board[r][c+2] === col) {
-            let k = c;
-            while (k < COLS && board[r][k] === col) {
-              matches.add(`${r},${k}`);
-              k++;
-            }
-          }
-        }
-      }
-      // По вертикали
-      for (let c = 0; c < COLS; c++) {
-        for (let r = 0; r <= ROWS - 3; r++) {
-          const col = board[r][c];
-          if (col && board[r+1][c] === col && board[r+2][c] === col) {
-            let k = r;
-            while (k < ROWS && board[k][c] === col) {
-              matches.add(`${k},${c}`);
-              k++;
-            }
-          }
-        }
-      }
-      return matches;
-    }
-
-    // === УДАЛЕНИЕ СОВПАДЕНИЙ И ЗАПОЛНЕНИЕ СВЕРХУ ===
-    function removeMatchesAndRefill(matches) {
-      if (matches.size > 0) {
-        playSuccessSound();
-        score += matches.size * 10;
+    // === ИНИЦИАЛИЗАЦИЯ ЯДРА ===
+    const game = new GameCore({
+      onScoreChange: (points) => {
+        score += points;
         document.getElementById('score').textContent = `Счёт: ${score}`;
-        // Обновление рекорда (только в бесконечном режиме, но пока везде)
         if (score > highScore) {
           highScore = score;
           localStorage.setItem('match3HighScore', highScore);
           document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
         }
-        // Частицы
-        const gameEl = document.getElementById('game');
-        const rect = gameEl.getBoundingClientRect();
-        matches.forEach(pos => {
-          const [r, c] = pos.split(',').map(Number);
-          const color = board[r][c];
-          const x = rect.left + 6 + c * (cellSize + 2) + cellSize / 2;
-          const y = rect.top + 6 + r * (cellSize + 2) + cellSize / 2;
-          createParticles(x, y, color);
-        });
-      }
-      // Удаляем совпадения
-      matches.forEach(pos => {
-        const [r, c] = pos.split(',').map(Number);
-        board[r][c] = null;
-      });
-      // Заполняем пустоты новыми фишками сверху
-      for (let c = 0; c < COLS; c++) {
-        const colVals = [];
-        for (let r = ROWS - 1; r >= 0; r--) {
-          if (board[r][c] !== null) colVals.push(board[r][c]);
-        }
-        while (colVals.length < ROWS) {
-          colVals.push(COLORS[Math.floor(Math.random() * COLORS.length)]);
-        }
-        for (let r = 0; r < ROWS; r++) {
-          board[ROWS - 1 - r][c] = colVals[r];
-        }
-      }
-      renderBoard(matches);
-      // Проверяем цепные реакции
-      setTimeout(() => {
-        const newMatches = findMatches();
-        if (newMatches.size > 0) {
-          removeMatchesAndRefill(newMatches);
-        } else {
-          // Проверка выполнения цели уровня
-          const goal = LEVEL_GOALS[currentLevel - 1] || LEVEL_GOALS[LEVEL_GOALS.length - 1];
-          if (score >= goal) {
-            if (currentLevel < LEVEL_GOALS.length) {
-              showNotification(`Уровень ${currentLevel} пройден!`, () => startLevel(currentLevel + 1));
-            } else {
-              showNotification('Поздравляем! Все уровни пройдены!', () => startLevel(1));
+      },
+      onBoardUpdate: (board) => {
+        // ничего не делаем — рендер в ядре
+      },
+      onSwapAttempt: (r1, c1, r2, c2) => {
+        // временная доска для проверки
+        const tempBoard = JSON.parse(JSON.stringify(game.board));
+        [tempBoard[r1][c1], tempBoard[r2][c2]] = [tempBoard[r2][c2], tempBoard[r1][c1]];
+        const matches = new Set();
+        // Проверка совпадений (повторяем логику из ядра)
+        for (let r = 0; r < 10; r++) {
+          for (let c = 0; c <= 7; c++) {
+            const col = tempBoard[r][c];
+            if (col && tempBoard[r][c+1] === col && tempBoard[r][c+2] === col) {
+              let k = c; while (k < 10 && tempBoard[r][k] === col) { matches.add(`${r},${k}`); k++; }
             }
           }
         }
-      }, 400);
-    }
-
-    // === ПОПЫТКА ОБМЕНА ФИШЕК ===
-    function attemptSwap(r1, c1, r2, c2) {
-      [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
-      const matches = findMatches();
-      if (matches.size === 0) {
-        // Откат, если нет совпадений
-        [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
-        renderBoard();
-      } else {
-        renderBoard();
-        setTimeout(() => removeMatchesAndRefill(matches), 300);
-      }
-    }
-
-    // === ОТРИСОВКА ДОСКИ ===
-    function renderBoard(highlightMatches = new Set()) {
-      const gameEl = document.getElementById('game');
-      gameEl.innerHTML = '';
-      gameRect = gameEl.getBoundingClientRect();
-      const gap = 2;
-      cellSize = (gameRect.width - gap * (COLS - 1)) / COLS;
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          const cell = document.createElement('div');
-          cell.className = 'cell';
-          cell.style.backgroundColor = board[r][c];
-          if (highlightMatches.has(`${r},${c}`)) {
-            cell.classList.add('falling');
+        for (let c = 0; c < 10; c++) {
+          for (let r = 0; r <= 7; r++) {
+            const col = tempBoard[r][c];
+            if (col && tempBoard[r+1][c] === col && tempBoard[r+2][c] === col) {
+              let k = r; while (k < 10 && tempBoard[k][c] === col) { matches.add(`${k},${c}`); k++; }
+            }
           }
-          cell.dataset.row = r;
-          cell.dataset.col = c;
-          gameEl.appendChild(cell);
+        }
+        if (matches.size === 0) {
+          game.renderBoard(); // откат
+        } else {
+          [game.board[r1][c1], game.board[r2][c2]] = [game.board[r2][c2], game.board[r1][c1]];
+          game.renderBoard();
+          setTimeout(() => {
+            game.removeMatchesAndRefill(matches, (pts) => {
+              score += pts;
+              document.getElementById('score').textContent = `Счёт: ${score}`;
+              if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('match3HighScore', highScore);
+                document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
+              }
+              // Проверка цели
+              const goal = LEVEL_GOALS[currentLevel - 1];
+              if (score >= goal) {
+                if (currentLevel < LEVEL_GOALS.length) {
+                  showNotification(`Уровень ${currentLevel} пройден!`, () => {
+                    currentLevel++;
+                    startLevel(currentLevel);
+                  });
+                } else {
+                  showNotification('Все уровни пройдены!', () => startLevel(1));
+                }
+              }
+            });
+          }, 300);
         }
       }
+    });
+
+    function startLevel(level) {
+      currentLevel = level;
+      score = 0;
+      document.getElementById('score').textContent = `Счёт: ${score}`;
+      document.getElementById('level').textContent = `Уровень: ${level}`;
+      document.getElementById('goal').textContent = `Цель: ${LEVEL_GOALS[level - 1]}`;
+      game.resetBoard();
     }
 
-    // === ОПРЕДЕЛЕНИЕ КЛЕТКИ ПО КООРДИНАТАМ ЭКРАНА ===
-    function getCellFromPoint(x, y) {
-      if (!gameRect) return null;
-      const pad = 6;
-      const left = gameRect.left + pad;
-      const top = gameRect.top + pad;
-      const width = gameRect.width - pad * 2;
-      const height = gameRect.height - pad * 2;
-      if (x < left || x > left + width || y < top || y > top + height) return null;
-      const col = Math.floor((x - left) / (cellSize + 2));
-      const row = Math.floor((y - top) / (cellSize + 2));
-      if (row >= 0 && row < ROWS && col >= 0 && col < COLS) return { row, col };
-      return null;
+    function showNotification(text, callback) {
+      document.getElementById('notification-text').textContent = text;
+      document.getElementById('notification').style.display = 'flex';
+      document.getElementById('next-level-btn').onclick = () => {
+        document.getElementById('notification').style.display = 'none';
+        callback();
+      };
     }
 
-    // === СОЗДАНИЕ КЛОНА ФИШКИ ПРИ ПЕРЕТАСКИВАНИИ ===
-    function createDraggingClone(color, clientX, clientY) {
-      if (draggingClone) draggingClone.remove();
-      draggingClone = document.createElement('div');
-      draggingClone.id = 'dragging-clone';
-      draggingClone.style.width = `${cellSize}px`;
-      draggingClone.style.height = `${cellSize}px`;
-      draggingClone.style.backgroundColor = color;
-      document.body.appendChild(draggingClone);
-      updateDraggingPosition(clientX, clientY);
-    }
-
-    // === ОБНОВЛЕНИЕ ПОЗИЦИИ КЛОНА ===
-    function updateDraggingPosition(clientX, clientY) {
-      if (!draggingClone) return;
-      const centerX = gameRect.left + 6 + startCol * (cellSize + 2) + cellSize / 2;
-      const centerY = gameRect.top + 6 + startRow * (cellSize + 2) + cellSize / 2;
-      let dx = clientX - centerX;
-      let dy = clientY - centerY;
-      const max = cellSize * 0.9;
-      dx = Math.max(-max, Math.min(max, dx));
-      dy = Math.max(-max, Math.min(max, dy));
-      let finalX = centerX;
-      let finalY = centerY;
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > cellSize / 3 && startCol < COLS - 1) finalX = centerX + (cellSize + 2);
-        else if (dx < -cellSize / 3 && startCol > 0) finalX = centerX - (cellSize + 2);
-      } else {
-        if (dy > cellSize / 3 && startRow < ROWS - 1) finalY = centerY + (cellSize + 2);
-        else if (dy < -cellSize / 3 && startRow > 0) finalY = centerY - (cellSize + 2);
-      }
-      draggingClone.style.left = `${finalX}px`;
-      draggingClone.style.top = `${finalY}px`;
-    }
-
-    // === УДАЛЕНИЕ КЛОНА ===
-    function removeDraggingClone() {
-      if (draggingClone) {
-        draggingClone.remove();
-        draggingClone = null;
-      }
-    }
-
-    // === TOUCH-ОБРАБОТЧИКИ (ТОЛЬКО ДЛЯ ANDROID) ===
+    // === TOUCH ===
     document.addEventListener('touchstart', e => {
-      // Блокируем, если открыто уведомление
-      if (document.getElementById('notification').style.display === 'flex') return;
+      if (document.getElementById('notification').style.display === 'flex' || 
+          document.getElementById('settings').style.display === 'block') return;
       if (e.touches.length !== 1) return;
-      const x = e.touches[0].clientX;
-      const y = e.touches[0].clientY;
-      const cell = getCellFromPoint(x, y);
-      if (!cell) return;
-      isDown = true;
-      startRow = cell.row;
-      startCol = cell.col;
-      createDraggingClone(board[startRow][startCol], x, y);
+      game.handleTouchStart(e.touches[0].clientX, e.touches[0].clientY);
       e.preventDefault();
     }, { passive: false });
 
     document.addEventListener('touchmove', e => {
-      if (document.getElementById('notification').style.display === 'flex') return;
-      if (!isDown || e.touches.length !== 1) return;
-      const x = e.touches[0].clientX;
-      const y = e.touches[0].clientY;
-      updateDraggingPosition(x, y);
+      if (document.getElementById('notification').style.display === 'flex' || 
+          document.getElementById('settings').style.display === 'block') return;
+      if (e.touches.length !== 1) return;
+      game.handleTouchMove(e.touches[0].clientX, e.touches[0].clientY);
       e.preventDefault();
     }, { passive: false });
 
     document.addEventListener('touchend', e => {
-      if (document.getElementById('notification').style.display === 'flex') return;
-      if (!isDown) return;
-      removeDraggingClone();
+      if (document.getElementById('notification').style.display === 'flex' || 
+          document.getElementById('settings').style.display === 'block') return;
       if (e.changedTouches.length === 0) return;
-      const x = e.changedTouches[0].clientX;
-      const y = e.changedTouches[0].clientY;
-      const pad = 6;
-      const left = gameRect.left + pad;
-      const top = gameRect.top + pad;
-      const centerX = left + startCol * (cellSize + 2) + cellSize / 2;
-      const centerY = top + startRow * (cellSize + 2) + cellSize / 2;
-      const candidates = [
-        { r: startRow, c: startCol },
-        { r: startRow - 1, c: startCol },
-        { r: startRow + 1, c: startCol },
-        { r: startRow, c: startCol - 1 },
-        { r: startRow, c: startCol + 1 }
-      ];
-      let best = null;
-      let minDist = Infinity;
-      for (const cand of candidates) {
-        if (cand.r < 0 || cand.r >= ROWS || cand.c < 0 || cand.c >= COLS) continue;
-        const cx = left + cand.c * (cellSize + 2) + cellSize / 2;
-        const cy = top + cand.r * (cellSize + 2) + cellSize / 2;
-        const dist = Math.hypot(x - cx, y - cy);
-        if (dist < minDist) {
-          minDist = dist;
-          best = cand;
-        }
-      }
-      if (best && (best.r !== startRow || best.c !== startCol) &&
-          (Math.abs(best.r - startRow) + Math.abs(best.c - startCol) === 1)) {
-        attemptSwap(startRow, startCol, best.r, best.c);
-      } else {
-        renderBoard();
-      }
-      isDown = false;
-      startRow = -1;
-      startCol = -1;
+      game.handleTouchEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
     }, { passive: false });
 
-    // === ЗАЩИТА ОТ СТАНДАРТНЫХ ДЕЙСТВИЙ ===
-    document.addEventListener('contextmenu', e => e.preventDefault());
-    document.addEventListener('selectstart', e => e.preventDefault());
+    // === НАСТРОЙКИ ===
+    document.getElementById('settings-btn').onclick = () => {
+      document.getElementById('settings').style.display = 'flex';
+    };
 
-    // === ИНИЦИАЛИЗАЦИЯ ИГРЫ ===
+    document.getElementById('theme-select').onchange = (e) => {
+      theme = e.target.value;
+      localStorage.setItem('match3Theme', theme);
+      document.body.classList.toggle('dark', theme === 'dark');
+    };
+
+    document.getElementById('shape-select').onchange = (e) => {
+      shape = e.target.value;
+      localStorage.setItem('match3Shape', shape);
+      document.body.classList.toggle('round', shape === 'round');
+    };
+
+    // === СТАРТ ===
     window.addEventListener('load', () => {
       document.getElementById('high-score').textContent = `Рекорд: ${highScore}`;
-      startLevel(1); // запуск первого уровня
+      startLevel(1);
     });
   </script>
 </body>
